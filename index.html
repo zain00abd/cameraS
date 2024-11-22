@@ -3,58 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>عرض فيديو الكاميرا</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <title>اختبار الكاميرا</title>
 </head>
 <body>
-  <h1>نظام قراءة الباركود</h1>
-  <video id="barcode-scanner" style="width: 100%; max-width: 500px; border: 1px solid black;" autoplay></video>
-  <div id="product-form" style="display: none;">
-    <label for="product-name">اسم المنتج:</label>
-    <input type="text" id="product-name" placeholder="أدخل اسم المنتج">
-    <label for="product-price">السعر:</label>
-    <input type="number" id="product-price" placeholder="أدخل السعر">
-    <button onclick="saveProduct()">حفظ المنتج</button>
-  </div>
+  <h1>اختبار الكاميرا</h1>
+  <video id="video" autoplay style="width: 100%; max-width: 500px; border: 1px solid black;"></video>
+  <br>
+  <label for="camera-select">اختر الكاميرا:</label>
+  <select id="camera-select"></select>
+  <button id="start-camera">بدء الكاميرا</button>
+
   <script>
-    const products = []; // مصفوفة المنتجات
+    let currentStream = null; // الاحتفاظ بالبث الحالي
+    const videoElement = document.getElementById('video');
+    const cameraSelect = document.getElementById('camera-select');
+    const startCameraButton = document.getElementById('start-camera');
 
-    // إعداد QuaggaJS لقراءة الباركود
-    Quagga.init({
-      inputStream: {
-        name: "Live",
-        type: "LiveStream",
-        constraints: {
-          facingMode: "environment", // الكاميرا الخلفية
-        },
-        target: document.querySelector('#barcode-scanner'),
-      },
-      decoder: {
-        readers: ["ean_reader"], // يدعم قراءة باركود EAN
-      },
-    }, (err) => {
-      if (err) {
-        console.error("Error initializing QuaggaJS:", err);
-        alert("تعذر الوصول إلى الكاميرا. تحقق من الإعدادات.");
-        return;
-      }
-      Quagga.start();
-    });
+    // دالة لبدء الكاميرا بناءً على deviceId المحدد
+    async function startCamera(deviceId) {
+      try {
+        // إيقاف البث الحالي إذا كان موجودًا
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+        }
 
-    // حفظ المنتج الجديد
-    function saveProduct() {
-      const code = document.getElementById('product-form').getAttribute('data-code');
-      const name = document.getElementById('product-name').value;
-      const price = document.getElementById('product-price').value;
-
-      if (name && price) {
-        products.push({ code, name, price });
-        alert('تم حفظ المنتج بنجاح!');
-        document.getElementById('product-form').style.display = 'none';
-      } else {
-        alert('يرجى إدخال اسم المنتج والسعر!');
+        // بدء البث مع الكاميرا المحددة
+        const constraints = {
+          video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoElement.srcObject = stream;
+        currentStream = stream;
+      } catch (error) {
+        console.error("تعذر الوصول إلى الكاميرا:", error);
+        alert("يرجى التحقق من إعدادات الكاميرا!");
       }
     }
+
+    // دالة لملء قائمة الكاميرات
+    async function populateCameraList() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        cameraSelect.innerHTML = ''; // مسح الخيارات السابقة
+        videoDevices.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `كاميرا ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+
+        if (videoDevices.length > 0) {
+          startCamera(videoDevices[0].deviceId); // بدء الكاميرا الأولى افتراضيًا
+        } else {
+          alert("لا توجد كاميرات متاحة!");
+        }
+      } catch (error) {
+        console.error("خطأ في الحصول على قائمة الكاميرات:", error);
+      }
+    }
+
+    // عند الضغط على زر بدء الكاميرا
+    startCameraButton.addEventListener('click', () => {
+      const selectedDeviceId = cameraSelect.value;
+      startCamera(selectedDeviceId);
+    });
+
+    // تحميل قائمة الكاميرات عند بدء الصفحة
+    populateCameraList();
   </script>
 </body>
 </html>
