@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>قراءة باركود المنتج</title>
+  <title>عرض فيديو الكاميرا</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 </head>
 <body>
   <h1>نظام قراءة الباركود</h1>
-  <video id="barcode-scanner" style="width: 300px;"></video>
+  <video id="barcode-scanner" style="width: 100%; max-width: 500px; border: 1px solid black;" autoplay></video>
   <div id="product-form" style="display: none;">
     <label for="product-name">اسم المنتج:</label>
     <input type="text" id="product-name" placeholder="أدخل اسم المنتج">
@@ -16,18 +16,17 @@
     <input type="number" id="product-price" placeholder="أدخل السعر">
     <button onclick="saveProduct()">حفظ المنتج</button>
   </div>
-  <div id="product-info" style="display: none;">
-    <p>اسم المنتج: <span id="saved-name"></span></p>
-    <p>السعر: <span id="saved-price"></span></p>
-  </div>
   <script>
-    const products = []; // مصفوفة لتخزين المنتجات
+    const products = []; // مصفوفة المنتجات
 
-    // تهيئة QuaggaJS
+    // إعداد QuaggaJS لقراءة الباركود
     Quagga.init({
       inputStream: {
         name: "Live",
         type: "LiveStream",
+        constraints: {
+          facingMode: "environment", // الكاميرا الخلفية
+        },
         target: document.querySelector('#barcode-scanner'),
       },
       decoder: {
@@ -35,31 +34,11 @@
       },
     }, (err) => {
       if (err) {
-        console.error(err);
+        console.error("Error initializing QuaggaJS:", err);
+        alert("تعذر الوصول إلى الكاميرا. تحقق من الإعدادات.");
         return;
       }
       Quagga.start();
-    });
-
-    // التعامل مع الباركود المكتشف
-    Quagga.onDetected((data) => {
-      const code = data.codeResult.code;
-      const existingProduct = products.find(product => product.code === code);
-
-      if (existingProduct) {
-        // إذا كان المنتج موجودًا
-        document.getElementById('product-info').style.display = 'block';
-        document.getElementById('product-form').style.display = 'none';
-        document.getElementById('saved-name').innerText = existingProduct.name;
-        document.getElementById('saved-price').innerText = existingProduct.price;
-      } else {
-        // إذا كان المنتج غير موجود
-        document.getElementById('product-info').style.display = 'none';
-        document.getElementById('product-form').style.display = 'block';
-        document.getElementById('product-name').value = '';
-        document.getElementById('product-price').value = '';
-        document.getElementById('product-form').setAttribute('data-code', code);
-      }
     });
 
     // حفظ المنتج الجديد
